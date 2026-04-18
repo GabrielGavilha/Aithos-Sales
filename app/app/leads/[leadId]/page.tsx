@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
-import { LeadDetails } from "@/components/leads/LeadDetails";
 import { getCurrentAppContext } from "@/lib/auth/app-context";
-import { getLeadWithTimeline } from "@/lib/services/leads";
+import { getLeadDetailsPayload } from "@/features/crm/data/repository";
+import { LeadDetailsScreen } from "@/features/lead-detail/LeadDetailsScreen";
 
 export const dynamic = "force-dynamic";
 
@@ -21,19 +21,11 @@ export default async function LeadDetailsPage({
   }
 
   const { leadId } = await params;
-  const data = await getLeadWithTimeline(context.workspace.id, leadId);
+  const data = await getLeadDetailsPayload(context.workspace.id, leadId);
 
-  if (!data.lead) {
+  if (!data) {
     notFound();
   }
 
-  return (
-    <LeadDetails
-      workspaceId={context.workspace.id}
-      lead={data.lead}
-      tasks={data.tasks}
-      events={data.events}
-      nextCursor={data.nextCursor}
-    />
-  );
+  return <LeadDetailsScreen workspaceId={context.workspace.id} payload={data} />;
 }

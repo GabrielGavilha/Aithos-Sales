@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { KanbanBoardClient } from "@/components/pipeline/KanbanBoardClient";
 import { getCurrentAppContext } from "@/lib/auth/app-context";
-import { getPipelineData } from "@/lib/services/leads";
+import { getPipelinePayload } from "@/features/crm/data/repository";
+import { PipelineScreen } from "@/features/pipeline/PipelineScreen";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +16,6 @@ export default async function PipelinePage() {
     redirect("/app/onboarding");
   }
 
-  const pipeline = await getPipelineData(context.workspace.id);
-
-  return (
-    <KanbanBoardClient
-      workspaceId={context.workspace.id}
-      stages={pipeline.stages}
-      leads={pipeline.leads}
-    />
-  );
+  const payload = await getPipelinePayload(context.workspace.id);
+  return <PipelineScreen workspaceId={context.workspace.id} payload={payload} />;
 }

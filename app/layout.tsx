@@ -4,7 +4,10 @@ import "@/components/AuthScreen.css";
 
 export const metadata: Metadata = {
   title: "Aithos Sales CRM",
-  description: "CRM comercial com funil, captura publica e automacoes"
+  description: "CRM comercial com funil, captura publica e automacoes",
+  icons: {
+    icon: "/icon.png"
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import clsx from "clsx";
 import type { CaptureForm, WorkspaceMember } from "@/lib/types";
 
 type WorkspaceSettingsProps = {
@@ -19,6 +20,7 @@ export const WorkspaceSettings = ({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"owner" | "admin" | "member">("member");
   const [message, setMessage] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<"success" | "error" | "neutral">("neutral");
   const [sending, setSending] = useState(false);
 
   const [formState, setFormState] = useState(forms);
@@ -42,6 +44,7 @@ export const WorkspaceSettings = ({
 
     setSending(true);
     setMessage(null);
+    setMessageTone("neutral");
 
     try {
       const response = await fetch("/api/invites/create", {
@@ -54,10 +57,12 @@ export const WorkspaceSettings = ({
 
       if (!response.ok) {
         setMessage(data.message ?? "Falha ao enviar convite.");
+        setMessageTone("error");
         return;
       }
 
       setMessage(`Convite enviado. URL de teste: ${data.inviteUrl}`);
+      setMessageTone("success");
       setEmail("");
     } finally {
       setSending(false);
@@ -93,6 +98,7 @@ export const WorkspaceSettings = ({
 
   const saveForm = async (form: CaptureForm) => {
     setSavingFormId(form.id);
+    setMessageTone("neutral");
 
     try {
       const response = await fetch(`/api/forms/${form.id}?workspaceId=${workspaceId}`, {
@@ -111,10 +117,12 @@ export const WorkspaceSettings = ({
 
       if (!response.ok) {
         setMessage(data.message ?? "Falha ao salvar configuracoes do formulario.");
+        setMessageTone("error");
         return;
       }
 
       setMessage(`Formulario ${form.title} atualizado com sucesso.`);
+      setMessageTone("success");
     } finally {
       setSavingFormId(null);
     }
@@ -122,9 +130,14 @@ export const WorkspaceSettings = ({
 
   return (
     <div className="space-y-5">
-      <section className="surface-card p-5">
-        <h2 className="text-lg font-semibold">Convites de membros</h2>
-        <p className="mt-1 text-sm text-muted">Convites expiram automaticamente em 48 horas.</p>
+      <section className="surface-card crm-fade-up-slow p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Membros</p>
+            <h2 className="mt-1 text-lg font-semibold text-[color:var(--text-primary)]">Convites de workspace</h2>
+            <p className="mt-1 text-sm text-muted">Convites expiram automaticamente em 48 horas.</p>
+          </div>
+        </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-[2fr,1fr,auto]">
           <input
@@ -142,24 +155,34 @@ export const WorkspaceSettings = ({
             <option value="admin">admin</option>
             <option value="owner">owner</option>
           </select>
-          <button type="button" className="brand-button" onClick={sendInvite}>
+          <button type="button" className="brand-button" onClick={sendInvite} disabled={sending}>
             {sending ? "Enviando..." : "Convidar"}
           </button>
         </div>
 
-        {message ? <p className="mt-3 text-sm text-muted">{message}</p> : null}
+        {message ? (
+          <p
+            className={clsx("mt-3 rounded-xl border px-3 py-2 text-sm", {
+              "border-emerald-200 bg-emerald-50 text-emerald-700": messageTone === "success",
+              "border-red-200 bg-red-50 text-red-700": messageTone === "error",
+              "border-[color:var(--brand-border)] bg-white/70 text-muted": messageTone === "neutral"
+            })}
+          >
+            {message}
+          </p>
+        ) : null}
       </section>
 
-      <section className="surface-card p-5">
-        <h2 className="text-lg font-semibold">Membros do workspace</h2>
+      <section className="surface-card crm-fade-up-slow crm-delay-soft-1 p-5">
+        <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">Membros do workspace</h2>
         <div className="mt-3 space-y-2">
           {sortedMembers.map((member) => (
             <div
               key={member.userId}
-              className="flex items-center justify-between rounded-lg border border-[color:var(--brand-border)] px-3 py-2"
+              className="flex items-center justify-between rounded-xl border border-[color:var(--brand-border)] bg-white/65 px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] hover:bg-white/85"
             >
               <div>
-                <p className="text-sm font-medium text-[color:var(--text-primary)]">{member.displayName}</p>
+                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{member.displayName}</p>
                 <p className="text-xs text-muted">{member.email}</p>
               </div>
               <span className="brand-badge">{member.role}</span>
@@ -169,17 +192,26 @@ export const WorkspaceSettings = ({
       </section>
 
       <section className="space-y-4">
-        {formState.map((form) => (
-          <article key={form.id} className="surface-card space-y-4 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Configuracao do formulario</h2>
-              <p className="text-xs text-muted">
+        {formState.map((form, index) => (
+          <article
+            key={form.id}
+            className="surface-card crm-fade-up-slow space-y-4 p-5"
+            style={{ animationDelay: `${Math.min(index * 90 + 180, 420)}ms` }}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Formulario</p>
+                <h3 className="mt-1 text-lg font-semibold text-[color:var(--text-primary)]">
+                  Configuracao do formulario
+                </h3>
+              </div>
+              <p className="rounded-full border border-[color:var(--brand-border)] bg-white/60 px-3 py-1 text-xs text-muted">
                 URL publica: /f/{workspaceSlug}/{form.id}
               </p>
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-sm text-muted">Titulo</span>
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">Titulo</span>
               <input
                 className="brand-input"
                 value={form.title}
@@ -188,29 +220,30 @@ export const WorkspaceSettings = ({
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm text-muted">Descricao</span>
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">Descricao</span>
               <textarea
-                className="brand-input min-h-20"
+                className="brand-input min-h-24"
                 value={form.description ?? ""}
                 onChange={(event) => updateText(form.id, "description", event.target.value)}
               />
             </label>
 
             <div>
-              <p className="mb-2 text-sm text-muted">Campos configuraveis</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">Campos configuraveis</p>
               <div className="space-y-2">
                 {form.fields.map((field) => (
                   <div
                     key={field.key}
-                    className="rounded-lg border border-[color:var(--brand-border)] px-3 py-2"
+                    className="rounded-xl border border-[color:var(--brand-border)] bg-white/65 px-3 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] hover:bg-white/85"
                   >
-                    <p className="text-sm font-medium text-[color:var(--text-primary)]">{field.label}</p>
-                    <div className="mt-2 flex gap-4 text-xs text-muted">
+                    <p className="text-sm font-semibold text-[color:var(--text-primary)]">{field.label}</p>
+                    <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted">
                       <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={field.enabled}
                           onChange={() => toggleField(form.id, field.key, "enabled")}
+                          className="h-4 w-4 accent-blue-600"
                         />
                         Ativo
                       </label>
@@ -219,6 +252,7 @@ export const WorkspaceSettings = ({
                           type="checkbox"
                           checked={field.required}
                           onChange={() => toggleField(form.id, field.key, "required")}
+                          className="h-4 w-4 accent-blue-600"
                         />
                         Obrigatorio
                       </label>
@@ -229,31 +263,33 @@ export const WorkspaceSettings = ({
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-sm text-muted">Texto LGPD</span>
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">Texto LGPD</span>
               <textarea
-                className="brand-input min-h-20"
+                className="brand-input min-h-24"
                 value={form.consentText}
                 onChange={(event) => updateText(form.id, "consentText", event.target.value)}
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm text-muted">Mensagem de sucesso</span>
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">Mensagem de sucesso</span>
               <textarea
-                className="brand-input min-h-20"
+                className="brand-input min-h-24"
                 value={form.successMessage}
                 onChange={(event) => updateText(form.id, "successMessage", event.target.value)}
               />
             </label>
 
-            <button
-              type="button"
-              className="brand-button"
-              onClick={() => saveForm(form)}
-              disabled={savingFormId === form.id}
-            >
-              {savingFormId === form.id ? "Salvando..." : "Salvar configuracoes"}
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="brand-button"
+                onClick={() => saveForm(form)}
+                disabled={savingFormId === form.id}
+              >
+                {savingFormId === form.id ? "Salvando..." : "Salvar configuracoes"}
+              </button>
+            </div>
           </article>
         ))}
       </section>

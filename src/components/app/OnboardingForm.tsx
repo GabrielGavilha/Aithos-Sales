@@ -50,40 +50,49 @@ export const OnboardingForm = () => {
   };
 
   return (
-    <form onSubmit={submit} className="surface-elevated mx-auto mt-16 w-full max-w-lg p-6">
-      <h1 className="text-2xl font-bold">Onboarding do Workspace</h1>
-      <p className="mt-2 text-sm text-muted">
-        Crie seu workspace e pipeline padrao para iniciar o funil comercial.
-      </p>
+    <div className="mx-auto mt-10 w-full max-w-[40rem] px-4 sm:mt-14">
+      <form onSubmit={submit} className="surface-elevated crm-fade-up space-y-5 p-6 sm:p-8">
+        <header>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Boas-vindas</p>
+          <h1 className="mt-1 text-2xl font-bold text-[color:var(--text-primary)]">Onboarding do workspace</h1>
+          <p className="mt-2 text-sm text-muted">
+            Defina seu ambiente inicial para comecar o funil comercial com pipeline padrao.
+          </p>
+        </header>
 
-      <div className="mt-6 space-y-4">
-        <label className="block">
-          <span className="mb-2 block text-sm uppercase tracking-[0.1em] text-muted">Nome do workspace</span>
-          <input
-            className="brand-input"
-            placeholder="Aithos Sales"
-            value={workspaceName}
-            onChange={(event) => setWorkspaceName(event.target.value)}
-            required
-          />
-        </label>
+        <div className="space-y-4">
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+              Nome do workspace
+            </span>
+            <input
+              className="brand-input"
+              placeholder="Aithos Sales"
+              value={workspaceName}
+              onChange={(event) => setWorkspaceName(event.target.value)}
+              required
+            />
+          </label>
 
-        <label className="block">
-          <span className="mb-2 block text-sm uppercase tracking-[0.1em] text-muted">Fuso horario</span>
-          <input
-            className="brand-input"
-            value={timezone}
-            onChange={(event) => setTimezone(event.target.value)}
-            required
-          />
-        </label>
-      </div>
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+              Fuso horario
+            </span>
+            <input
+              className="brand-input"
+              value={timezone}
+              onChange={(event) => setTimezone(event.target.value)}
+              required
+            />
+          </label>
+        </div>
 
-      {error ? <p className="mt-4 text-sm text-[color:var(--error)]">{error}</p> : null}
+        {error ? <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
 
-      <button type="submit" className="brand-button mt-6 w-full" disabled={loading}>
-        {loading ? "Criando..." : "Criar workspace"}
-      </button>
-    </form>
+        <button type="submit" className="brand-button w-full" disabled={loading}>
+          {loading ? "Criando..." : "Criar workspace"}
+        </button>
+      </form>
+    </div>
   );
 };

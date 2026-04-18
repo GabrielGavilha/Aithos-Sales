@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
-import { WorkspaceSettings } from "@/components/app/WorkspaceSettings";
+import { SettingsScreen } from "@/features/settings/SettingsScreen";
+import { getSettingsPayload } from "@/features/crm/data/repository";
 import { getCurrentAppContext } from "@/lib/auth/app-context";
-import { getWorkspaceForms } from "@/lib/services/forms";
-import { getWorkspaceMembers } from "@/lib/services/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -17,17 +16,6 @@ export default async function SettingsPage() {
     redirect("/app/onboarding");
   }
 
-  const [members, forms] = await Promise.all([
-    getWorkspaceMembers(context.workspace.id),
-    getWorkspaceForms(context.workspace.id)
-  ]);
-
-  return (
-    <WorkspaceSettings
-      workspaceId={context.workspace.id}
-      workspaceSlug={context.workspace.slug}
-      members={members}
-      forms={forms}
-    />
-  );
+  const payload = await getSettingsPayload(context.workspace.id);
+  return <SettingsScreen workspaceId={context.workspace.id} payload={payload} />;
 }

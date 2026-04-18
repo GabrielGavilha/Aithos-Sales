@@ -161,57 +161,68 @@ export const LeadDetails = ({ workspaceId, lead, tasks, events, nextCursor }: Le
   };
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.1fr,0.9fr]">
-      <section className="surface-card space-y-4 p-5">
-        <header className="flex flex-wrap items-start justify-between gap-3">
+    <div className="grid gap-5 lg:grid-cols-[1.18fr,0.82fr]">
+      <section className="space-y-5">
+        <article className="surface-card crm-fade-up p-5">
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Lead</p>
+              <h2 className="mt-1 text-2xl font-bold text-[color:var(--text-primary)]">{lead.name}</h2>
+              <p className="mt-1 text-sm text-muted">{lead.company || "Sem empresa"}</p>
+            </div>
+
+            <a href={whatsappLink} target="_blank" rel="noreferrer" className="brand-button">
+              <MessageCircle className="h-4 w-4" aria-hidden />
+              Abrir no WhatsApp
+            </a>
+          </header>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="rounded-xl border border-[color:var(--brand-border)] bg-white/65 p-3 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] hover:bg-white/85">
+              <p className="text-xs uppercase tracking-[0.06em] text-muted">E-mail</p>
+              <p className="mt-1 font-medium text-[color:var(--text-primary)]">{lead.email || "-"}</p>
+            </div>
+            <div className="rounded-xl border border-[color:var(--brand-border)] bg-white/65 p-3 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] hover:bg-white/85">
+              <p className="text-xs uppercase tracking-[0.06em] text-muted">Telefone</p>
+              <p className="mt-1 font-medium text-[color:var(--text-primary)]">{lead.phone}</p>
+            </div>
+            <div className="rounded-xl border border-[color:var(--brand-border)] bg-white/65 p-3 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] hover:bg-white/85">
+              <p className="text-xs uppercase tracking-[0.06em] text-muted">Necessidade</p>
+              <p className="mt-1 font-medium text-[color:var(--text-primary)]">{lead.need || "-"}</p>
+            </div>
+            <div className="rounded-xl border border-[color:var(--brand-border)] bg-white/65 p-3 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] hover:bg-white/85">
+              <p className="text-xs uppercase tracking-[0.06em] text-muted">Stage atual</p>
+              <p className="mt-1 font-medium text-[color:var(--text-primary)]">{lead.stageId}</p>
+            </div>
+          </div>
+        </article>
+
+        <article className="surface-card crm-fade-up crm-delay-1 space-y-4 p-5">
           <div>
-            <h2 className="text-2xl font-bold text-[color:var(--text-primary)]">{lead.name}</h2>
-            <p className="text-muted">{lead.company || "Sem empresa"}</p>
+            <h3 className="text-base font-semibold text-[color:var(--text-primary)]">Notas da conversa</h3>
+            <p className="text-sm text-muted">Registre os principais pontos para manter contexto comercial.</p>
           </div>
-          <a href={whatsappLink} target="_blank" rel="noreferrer" className="brand-button">
-            <MessageCircle className="h-4 w-4" aria-hidden />
-            Abrir no WhatsApp
-          </a>
-        </header>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="surface-elevated p-3 text-sm">
-            <p className="text-muted">E-mail</p>
-            <p>{lead.email || "-"}</p>
-          </div>
-          <div className="surface-elevated p-3 text-sm">
-            <p className="text-muted">Telefone</p>
-            <p>{lead.phone}</p>
-          </div>
-          <div className="surface-elevated p-3 text-sm">
-            <p className="text-muted">Necessidade</p>
-            <p>{lead.need || "-"}</p>
-          </div>
-          <div className="surface-elevated p-3 text-sm">
-            <p className="text-muted">Stage</p>
-            <p>{lead.stageId}</p>
-          </div>
-        </div>
-
-        <div className="surface-elevated p-4">
-          <p className="mb-2 text-sm font-semibold">Adicionar nota</p>
           <textarea
-            className="brand-input min-h-20"
+            className="brand-input min-h-28"
             value={note}
             onChange={(event) => setNote(event.target.value)}
             placeholder="Resumo da conversa"
           />
-          <button type="button" className="brand-button mt-3" onClick={() => startTransition(submitNote)}>
+          <button type="button" className="brand-button" onClick={() => startTransition(submitNote)}>
             Salvar nota
           </button>
-        </div>
+        </article>
 
-        <div className="surface-elevated p-4">
-          <p className="mb-2 text-sm font-semibold">Criar tarefa</p>
+        <article className="surface-card crm-fade-up crm-delay-2 space-y-4 p-5">
+          <div>
+            <h3 className="text-base font-semibold text-[color:var(--text-primary)]">Tarefas do lead</h3>
+            <p className="text-sm text-muted">Planeje proximos contatos e acompanhe execucao.</p>
+          </div>
+
           <div className="grid gap-2 sm:grid-cols-2">
             <input
               className="brand-input"
-              placeholder="Titulo"
+              placeholder="Titulo da tarefa"
               value={taskTitle}
               onChange={(event) => setTaskTitle(event.target.value)}
             />
@@ -222,18 +233,19 @@ export const LeadDetails = ({ workspaceId, lead, tasks, events, nextCursor }: Le
               onChange={(event) => setTaskDueAt(event.target.value)}
             />
           </div>
-          <button type="button" className="brand-button mt-3" onClick={() => startTransition(submitTask)}>
+
+          <button type="button" className="brand-button" onClick={() => startTransition(submitTask)}>
             Criar tarefa
           </button>
 
-          <div className="mt-3 space-y-2">
+          <div className="space-y-2">
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="flex items-center justify-between rounded-lg border border-[color:var(--brand-border)] px-3 py-2"
+                className="flex items-center justify-between rounded-xl border border-[color:var(--brand-border)] bg-white/65 px-3 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] hover:bg-white/85"
               >
                 <div>
-                  <p className="text-sm text-[color:var(--text-primary)]">{task.title}</p>
+                  <p className="text-sm font-medium text-[color:var(--text-primary)]">{task.title}</p>
                   <p className="text-xs text-muted">Vence em {new Date(task.dueAt).toLocaleString("pt-BR")}</p>
                 </div>
                 {task.status === "pending" ? (
@@ -242,21 +254,23 @@ export const LeadDetails = ({ workspaceId, lead, tasks, events, nextCursor }: Le
                     className="brand-button-secondary text-xs"
                     onClick={() => startTransition(() => completeTask(task.id))}
                   >
-                    <CheckCircle2 className="h-3 w-3" aria-hidden />
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
                     Concluir
                   </button>
                 ) : (
-                  <span className="text-xs text-emerald-300">Concluida</span>
+                  <span className="text-xs font-semibold text-emerald-600">Concluida</span>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </article>
       </section>
 
       <aside className="space-y-5">
-        <section className="surface-card p-5">
-          <p className="mb-2 text-sm font-semibold">Tags</p>
+        <section className="surface-card crm-fade-up crm-delay-1 p-5">
+          <h3 className="text-base font-semibold text-[color:var(--text-primary)]">Tags</h3>
+          <p className="mb-3 text-sm text-muted">Classifique o lead para facilitar filtros e segmentacao.</p>
+
           <div className="mb-3 flex flex-wrap gap-2">
             {lead.tags.map((tag) => (
               <button
@@ -271,6 +285,7 @@ export const LeadDetails = ({ workspaceId, lead, tasks, events, nextCursor }: Le
               </button>
             ))}
           </div>
+
           <div className="flex gap-2">
             <input
               className="brand-input"
@@ -284,20 +299,17 @@ export const LeadDetails = ({ workspaceId, lead, tasks, events, nextCursor }: Le
           </div>
         </section>
 
-        <section className="surface-card p-5">
-          <p className="mb-2 text-sm font-semibold">Fechar lead</p>
+        <section className="surface-card crm-fade-up crm-delay-2 p-5">
+          <h3 className="text-base font-semibold text-[color:var(--text-primary)]">Fechamento</h3>
+          <p className="mb-3 text-sm text-muted">Registre o resultado da oportunidade com motivo.</p>
           <textarea
-            className="brand-input min-h-20"
+            className="brand-input min-h-24"
             value={closeReason}
             onChange={(event) => setCloseReason(event.target.value)}
             placeholder="Motivo"
           />
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className="brand-button"
-              onClick={() => startTransition(() => closeLead("won"))}
-            >
+            <button type="button" className="brand-button" onClick={() => startTransition(() => closeLead("won"))}>
               Ganho
             </button>
             <button
@@ -310,14 +322,14 @@ export const LeadDetails = ({ workspaceId, lead, tasks, events, nextCursor }: Le
           </div>
         </section>
 
-        <section className="surface-card p-5">
-          <p className="mb-3 text-sm font-semibold">Timeline</p>
+        <section className="surface-card crm-fade-up crm-delay-3 p-5">
+          <h3 className="text-base font-semibold text-[color:var(--text-primary)]">Timeline</h3>
+          <p className="mb-3 text-sm text-muted">Historico cronologico de interacoes e alteracoes.</p>
+
           <div className="max-h-[560px] space-y-2 overflow-auto pr-1">
             {timeline.map((event) => (
-              <article key={event.id} className="rounded-lg border border-[color:var(--brand-border)] p-3">
-                <p className="text-sm font-medium text-[color:var(--text-primary)]">
-                  {eventLabel[event.type]}
-                </p>
+              <article key={event.id} className="rounded-xl border border-[color:var(--brand-border)] bg-white/65 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] hover:bg-white/85">
+                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{eventLabel[event.type]}</p>
                 <p className="text-xs text-muted">{new Date(event.createdAt).toLocaleString("pt-BR")}</p>
                 <pre className="mt-2 whitespace-pre-wrap text-xs text-muted">
                   {JSON.stringify(event.payload, null, 2)}
@@ -325,6 +337,7 @@ export const LeadDetails = ({ workspaceId, lead, tasks, events, nextCursor }: Le
               </article>
             ))}
           </div>
+
           {timelineCursor ? (
             <button
               type="button"

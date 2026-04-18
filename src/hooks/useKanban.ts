@@ -2,15 +2,17 @@ import { useCallback, useMemo, useState } from "react";
 import type { SaleCard, Status } from "../types/kanban";
 import { STATUS_ORDER } from "../data/sampleKanban";
 
+const createEmptyColumns = (): Record<Status, SaleCard[]> =>
+  STATUS_ORDER.reduce((acc, status) => {
+    acc[status] = [];
+    return acc;
+  }, {} as Record<Status, SaleCard[]>);
+
 const groupByStatus = (cards: SaleCard[]) => {
-  const grouped: Record<Status, SaleCard[]> = {
-    lead: [],
-    negotiation: [],
-    closed: [],
-  };
+  const grouped = createEmptyColumns();
 
   cards.forEach((card) => {
-    grouped[card.status].push(card);
+    grouped[card.etapa].push(card);
   });
 
   return grouped;
@@ -25,12 +27,12 @@ export const useKanban = (initialCards: SaleCard[]) => {
     (cardId: string, targetStatus: Status) => {
       setColumns((prev) => {
         let movingCard: SaleCard | null = null;
-        const next = { ...prev } as Record<Status, SaleCard[]>;
+        const next = createEmptyColumns();
 
         (Object.keys(prev) as Status[]).forEach((status) => {
           next[status] = prev[status].filter((card) => {
             if (card.id === cardId) {
-              movingCard = { ...card, status: targetStatus };
+              movingCard = { ...card, etapa: targetStatus };
               return false;
             }
             return true;
@@ -46,6 +48,13 @@ export const useKanban = (initialCards: SaleCard[]) => {
     },
     [setColumns]
   );
+
+  const addCard = useCallback((card: SaleCard) => {
+    setColumns((prev) => ({
+      ...prev,
+      [card.etapa]: [...prev[card.etapa], card],
+    }));
+  }, []);
 
   const handleDragStart = useCallback((cardId: string, status: Status) => {
     setActiveCardId(cardId);
@@ -91,6 +100,7 @@ export const useKanban = (initialCards: SaleCard[]) => {
     overColumnId,
     columnOrder,
     moveCard,
+    addCard,
     moveRelative,
     handleDragStart,
     handleDragEnd,
