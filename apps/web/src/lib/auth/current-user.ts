@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SessionUser = {
@@ -10,7 +11,7 @@ export type SessionUser = {
   emailVerified: boolean;
 };
 
-export const getCurrentSessionUser = async (): Promise<SessionUser | null> => {
+export const getCurrentSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
@@ -37,4 +38,4 @@ export const getCurrentSessionUser = async (): Promise<SessionUser | null> => {
     picture: avatarUrl,
     emailVerified: Boolean(user.email_confirmed_at)
   };
-};
+});
