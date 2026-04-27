@@ -1,10 +1,11 @@
 import "server-only";
 
+import { cache } from "react";
 import { getCurrentSessionUser } from "@/lib/auth/current-user";
 import { getUnreadNotificationCount } from "@aithos/db";
 import { getUserWorkspaceMemberships } from "@aithos/db";
 
-export const getCurrentAppContext = async () => {
+export const getCurrentAppContext = cache(async () => {
   const user = await getCurrentSessionUser();
 
   if (!user) {
@@ -29,4 +30,4 @@ export const getCurrentAppContext = async () => {
     membership: primary?.member ?? null,
     unreadNotifications
   };
-};
+});
