@@ -12,6 +12,7 @@ export * from "@/components/crm/LeadHeader";
 export * from "@/components/crm/LeadTimeline";
 export * from "@/components/crm/LossReasonChart";
 export * from "@/components/crm/MetricCard";
+export * from "@/components/crm/NewLeadDialog";
 export * from "@/components/crm/PriorityBadge";
 export * from "@/components/crm/PublicFormPreview";
 export * from "@/components/crm/QuickActionButtons";
