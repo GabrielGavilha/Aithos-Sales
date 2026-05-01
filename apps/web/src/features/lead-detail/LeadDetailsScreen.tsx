@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightLeft, CheckCircle2, Flag, NotebookPen, Plus } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, Flag, NotebookPen, Pencil, Plus } from "lucide-react";
 import { LeadHeader, LeadTimeline, TaskItem } from "@/components/crm";
 import {
   Button,
@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -19,7 +20,7 @@ import {
   Textarea,
   useToast
 } from "@/components/ui";
-import type { LeadDetailsPayload } from "@/types";
+import type { Lead, LeadDetailsPayload } from "@/types";
 
 type LeadDetailsScreenProps = {
   workspaceId: string;
@@ -35,6 +36,18 @@ export const LeadDetailsScreen = ({ workspaceId, payload }: LeadDetailsScreenPro
   const [closeReason, setCloseReason] = React.useState("");
   const [stageId, setStageId] = React.useState(payload.lead.stageId);
   const [saving, setSaving] = React.useState(false);
+
+  const [editDraft, setEditDraft] = React.useState<Partial<Lead>>({
+    name: payload.lead.name,
+    phone: payload.lead.phone,
+    email: payload.lead.email ?? "",
+    company: payload.lead.company ?? "",
+    need: payload.lead.need ?? "",
+    budget: payload.lead.budget,
+    deadline: payload.lead.deadline ?? "",
+    source: payload.lead.source ?? "",
+    priority: payload.lead.priority
+  });
 
   const runAction = async (action: () => Promise<Response>, successMessage: string) => {
     setSaving(true);
@@ -60,6 +73,93 @@ export const LeadDetailsScreen = ({ workspaceId, payload }: LeadDetailsScreenPro
     <section className="grid gap-5 xl:grid-cols-[1.2fr,0.8fr]">
       <div className="space-y-4">
         <LeadHeader lead={payload.lead} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Editar dados</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Nome</Label>
+                <Input value={editDraft.name ?? ""} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Telefone</Label>
+                <Input value={editDraft.phone ?? ""} onChange={(e) => setEditDraft((d) => ({ ...d, phone: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Email</Label>
+                <Input value={editDraft.email ?? ""} onChange={(e) => setEditDraft((d) => ({ ...d, email: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Empresa</Label>
+                <Input value={editDraft.company ?? ""} onChange={(e) => setEditDraft((d) => ({ ...d, company: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Orcamento (R$)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editDraft.budget ?? ""}
+                  onChange={(e) => setEditDraft((d) => ({ ...d, budget: e.target.value ? Number(e.target.value) : undefined }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Prazo</Label>
+                <Input value={editDraft.deadline ?? ""} onChange={(e) => setEditDraft((d) => ({ ...d, deadline: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Origem</Label>
+                <Input value={editDraft.source ?? ""} onChange={(e) => setEditDraft((d) => ({ ...d, source: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Prioridade</Label>
+                <Select value={editDraft.priority} onValueChange={(v) => setEditDraft((d) => ({ ...d, priority: v as Lead["priority"] }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Media</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Necessidade</Label>
+              <Textarea value={editDraft.need ?? ""} onChange={(e) => setEditDraft((d) => ({ ...d, need: e.target.value }))} rows={2} />
+            </div>
+            <Button
+              disabled={saving}
+              onClick={() =>
+                runAction(
+                  () =>
+                    fetch(`/api/leads/${payload.lead.id}?workspaceId=${workspaceId}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        name: editDraft.name,
+                        phone: editDraft.phone,
+                        email: editDraft.email || undefined,
+                        company: editDraft.company || undefined,
+                        need: editDraft.need || undefined,
+                        budget: editDraft.budget ?? null,
+                        deadline: editDraft.deadline || undefined,
+                        source: editDraft.source || undefined,
+                        priority: editDraft.priority
+                      })
+                    }),
+                  "Dados do lead atualizados."
+                )
+              }
+            >
+              <Pencil className="h-4 w-4" />
+              Salvar alteracoes
+            </Button>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

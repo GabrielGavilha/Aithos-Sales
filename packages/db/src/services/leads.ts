@@ -937,6 +937,199 @@ export const removeStage = async (workspaceId: string, stageId: string) => {
   }
 };
 
+export const createLead = async (params: {
+  workspaceId: string;
+  userId: string;
+  data: {
+    name: string;
+    phone: string;
+    email?: string;
+    company?: string;
+    need?: string;
+    budget?: number;
+    deadline?: string;
+    source?: string;
+    priority?: Priority;
+    stageId?: string;
+  };
+}) => {
+  if (!isSupabaseAdminConfigured()) {
+    throw new Error("Supabase nao configurado.");
+  }
+
+  const admin = getSupabaseAdminClient();
+  const { data } = params;
+  const now = nowIso();
+
+  const stages = await listStages(params.workspaceId);
+  const targetStage = data.stageId
+    ? stages.find((s) => s.id === data.stageId) ?? stages[0]
+    : stages[0];
+
+  if (!targetStage) {
+    throw new Error("Nenhuma etapa configurada no workspace.");
+  }
+
+  const leadBase: Lead = {
+    id: "",
+    workspaceId: params.workspaceId,
+    name: data.name,
+    phone: data.phone,
+    phoneNormalized: normalizePhone(data.phone),
+    email: data.email || undefined,
+    emailNormalized: data.email ? normalizeText(data.email) : undefined,
+    company: data.company || undefined,
+    companyNormalized: data.company ? normalizeText(data.company) : undefined,
+    need: data.need || undefined,
+    score: 0,
+    budget: data.budget,
+    deadline: data.deadline || undefined,
+    source: data.source || undefined,
+    priority: data.priority ?? "medium",
+    tags: [],
+    stageId: targetStage.id,
+    hasPendingTask: false,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  leadBase.score = scoreFromLead(leadBase);
+
+  const { data: row, error } = await admin
+    .from("leads")
+    .insert({
+      workspace_id: params.workspaceId,
+      name: leadBase.name,
+      name_normalized: normalizeText(leadBase.name),
+      phone: leadBase.phone,
+      phone_normalized: leadBase.phoneNormalized,
+      email: leadBase.email ?? null,
+      email_normalized: leadBase.emailNormalized ?? null,
+      company: leadBase.company ?? null,
+      company_normalized: leadBase.companyNormalized ?? null,
+      need: leadBase.need ?? null,
+      score: leadBase.score,
+      budget: leadBase.budget ?? null,
+      deadline: leadBase.deadline ?? null,
+      notes: null,
+      source: leadBase.source ?? null,
+      priority: leadBase.priority,
+      tags: [],
+      stage_id: targetStage.id,
+      assigned_to: null,
+      has_pending_task: false,
+      last_contact_at: null,
+      closed_at: null,
+      closed_reason: null,
+      status: null,
+      utm: null,
+      created_at: now,
+      updated_at: now
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !row) {
+    throw new Error("Falha ao criar lead.");
+  }
+
+  await pushLeadEvent({
+    workspaceId: params.workspaceId,
+    leadId: row.id,
+    type: "created",
+    createdBy: params.userId,
+    payload: { source: data.source ?? "manual" }
+  });
+
+  return row.id;
+};
+
+export const updateLead = async (params: {
+  workspaceId: string;
+  leadId: string;
+  userId: string;
+  data: {
+    name?: string;
+    phone?: string;
+    email?: string | null;
+    company?: string;
+    need?: string;
+    budget?: number | null;
+    deadline?: string;
+    notes?: string;
+    source?: string;
+    priority?: Priority;
+  };
+}) => {
+  if (!isSupabaseAdminConfigured()) {
+    throw new Error("Supabase nao configurado.");
+  }
+
+  const lead = await getLeadById(params.workspaceId, params.leadId);
+  if (!lead) {
+    throw new Error("Lead nao encontrado.");
+  }
+
+  const admin = getSupabaseAdminClient();
+  const { data } = params;
+  const now = nowIso();
+
+  const patch: Record<string, unknown> = { updated_at: now };
+
+  if (data.name !== undefined) {
+    patch.name = data.name;
+    patch.name_normalized = normalizeText(data.name);
+  }
+  if (data.phone !== undefined) {
+    patch.phone = data.phone;
+    patch.phone_normalized = normalizePhone(data.phone);
+  }
+  if ("email" in data) {
+    patch.email = data.email || null;
+    patch.email_normalized = data.email ? normalizeText(data.email) : null;
+  }
+  if ("company" in data) {
+    patch.company = data.company || null;
+    patch.company_normalized = data.company ? normalizeText(data.company) : null;
+  }
+  if ("need" in data) patch.need = data.need || null;
+  if ("budget" in data) patch.budget = data.budget ?? null;
+  if ("deadline" in data) patch.deadline = data.deadline || null;
+  if ("notes" in data) patch.notes = data.notes || null;
+  if ("source" in data) patch.source = data.source || null;
+  if (data.priority !== undefined) patch.priority = data.priority;
+
+  // Recalcula score com os dados atualizados
+  const merged: Lead = {
+    ...lead,
+    name: (data.name ?? lead.name),
+    company: ("company" in data ? data.company : lead.company),
+    need: ("need" in data ? data.need : lead.need),
+    budget: ("budget" in data ? (data.budget ?? undefined) : lead.budget),
+    priority: (data.priority ?? lead.priority),
+    tags: lead.tags
+  };
+  patch.score = scoreFromLead(merged);
+
+  const { error } = await admin
+    .from("leads")
+    .update(patch)
+    .eq("workspace_id", params.workspaceId)
+    .eq("id", params.leadId);
+
+  if (error) {
+    throw new Error("Falha ao atualizar lead.");
+  }
+
+  await pushLeadEvent({
+    workspaceId: params.workspaceId,
+    leadId: params.leadId,
+    type: "updated",
+    createdBy: params.userId,
+    payload: { fields: Object.keys(data) }
+  });
+};
+
 export const getLeadWithTimeline = async (workspaceId: string, leadId: string) => {
   const [lead, events, tasks] = await Promise.all([
     getLeadById(workspaceId, leadId),
