@@ -28,9 +28,11 @@ export const QuickActionButtons = () => (
         Exportar
       </Button>
     </Link>
-    <Button size="sm">
-      <Plus className="h-4 w-4" />
-      Novo lead
-    </Button>
+    <Link href="/app/leads?new=1">
+      <Button size="sm">
+        <Plus className="h-4 w-4" />
+        Novo lead
+      </Button>
+    </Link>
   </div>
 );
