@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { MessageCircle, MoveRight, NotebookPen } from "lucide-react";
 import * as React from "react";
 import { EmptyState, LeadCard, LeadFilters, NewLeadDialog } from "@/components/crm";
@@ -17,6 +18,8 @@ type LeadsScreenProps = {
 export const LeadsScreen = ({ workspaceId, payload }: LeadsScreenProps) => {
   const { filters, setFilters, filteredLeads } = useLeadFilters(payload.leads);
   const isMobile = useMobile();
+  const searchParams = useSearchParams();
+  const [dialogOpen, setDialogOpen] = React.useState(() => searchParams.get("new") === "1");
 
   return (
     <section className="space-y-4">
@@ -27,7 +30,7 @@ export const LeadsScreen = ({ workspaceId, payload }: LeadsScreenProps) => {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline">{filteredLeads.length} resultados</Badge>
-          <NewLeadDialog workspaceId={workspaceId} stages={payload.stages} />
+          <NewLeadDialog workspaceId={workspaceId} stages={payload.stages} open={dialogOpen} onOpenChange={setDialogOpen} />
         </div>
       </div>
 
