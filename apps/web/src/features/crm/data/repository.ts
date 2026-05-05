@@ -6,9 +6,11 @@ import {
   getPipelineData,
   getWorkspaceById,
   getWorkspaceForms,
+  getWorkspaceMembers,
   listLeadTasks,
   listLeads,
-  listStages
+  listStages,
+  listWorkspacePendingTasks
 } from "@aithos/db";
 import type { Lead as LegacyLead, Stage as LegacyStage } from "@aithos/db";
 import {
@@ -89,12 +91,24 @@ const computeMetrics = (leads: LegacyLead[], stages: LegacyStage[]) => {
   return { leadsToday, avgTimeToFirstContactHours, conversionNovoToGanho, stalledLeads, topLossReasons, leadsByStage, conversionByStage };
 };
 
+const buildNextTaskMap = async (workspaceId: string): Promise<Map<string, string>> => {
+  const pendingTasks = await listWorkspacePendingTasks(workspaceId);
+  const map = new Map<string, string>();
+  for (const task of pendingTasks) {
+    if (!map.has(task.leadId)) {
+      map.set(task.leadId, task.dueAt);
+    }
+  }
+  return map;
+};
+
 const buildLeadsPayload = async (workspaceId: string): Promise<LeadsPayload> => {
-  const [legacyLeads, legacyStages] = await Promise.all([
+  const [legacyLeads, legacyStages, nextTaskMap] = await Promise.all([
     cachedListLeads(workspaceId),
-    cachedListStages(workspaceId)
+    cachedListStages(workspaceId),
+    buildNextTaskMap(workspaceId)
   ]);
-  const leads = legacyLeads.map(mapLegacyLead);
+  const leads = legacyLeads.map((l) => mapLegacyLead(l, nextTaskMap.get(l.id)));
   const stages = legacyStages.map(mapLegacyStage);
   const sources = Array.from(new Set(leads.map((lead) => lead.source).filter(Boolean))) as string[];
   const tags = Array.from(new Set(leads.flatMap((lead) => lead.tags.map((tag) => tag.label)))).map((label) => ({
@@ -108,9 +122,12 @@ const buildLeadsPayload = async (workspaceId: string): Promise<LeadsPayload> => 
 export const getLeadsPayload = async (workspaceId: string) => buildLeadsPayload(workspaceId);
 
 export const getPipelinePayload = async (workspaceId: string): Promise<PipelinePayload> => {
-  const pipeline = await getPipelineData(workspaceId);
+  const [pipeline, nextTaskMap] = await Promise.all([
+    getPipelineData(workspaceId),
+    buildNextTaskMap(workspaceId)
+  ]);
   const stages = pipeline.stages.map(mapLegacyStage).sort((a, b) => a.order - b.order);
-  const leads = pipeline.leads.map(mapLegacyLead);
+  const leads = pipeline.leads.map((l) => mapLegacyLead(l, nextTaskMap.get(l.id)));
   const columns = stages.map((stage) => {
     const columnLeads = leads.filter((lead) => lead.stageId === stage.id);
     return {
@@ -131,15 +148,22 @@ export const getLeadDetailsPayload = async (
   workspaceId: string,
   leadId: string
 ): Promise<LeadDetailsPayload | null> => {
-  const result = await getLeadWithTimeline(workspaceId, leadId);
+  const [result, stages, rawMembers] = await Promise.all([
+    getLeadWithTimeline(workspaceId, leadId),
+    cachedListStages(workspaceId),
+    getWorkspaceMembers(workspaceId)
+  ]);
+
   if (!result.lead) return null;
 
-  const stages = (await cachedListStages(workspaceId)).map(mapLegacyStage);
   return {
     lead: mapLegacyLead(result.lead),
     tasks: result.tasks.map(mapLegacyTask),
     events: result.events.map(mapLegacyEvent),
-    stages
+    stages: stages.map(mapLegacyStage),
+    members: rawMembers
+      .filter((m) => m.status === "active")
+      .map((m) => ({ userId: m.userId, displayName: m.displayName }))
   };
 };
 
@@ -212,19 +236,26 @@ export const getMetricsPayload = async (workspaceId: string): Promise<MetricsPay
   const { avgTimeToFirstContactHours, topLossReasons } = computeMetrics(legacyLeads, legacyStages);
 
   const leadsBySourceMap = new Map<string, number>();
-  const gainsVsLosses = [
-    { period: "Sem 1", ganhos: 0, perdidos: 0 },
-    { period: "Sem 2", ganhos: 0, perdidos: 0 },
-    { period: "Sem 3", ganhos: 0, perdidos: 0 },
-    { period: "Sem 4", ganhos: 0, perdidos: 0 }
-  ];
-
-  leads.forEach((lead, index) => {
+  leads.forEach((lead) => {
     const source = lead.source ?? "indefinido";
     leadsBySourceMap.set(source, (leadsBySourceMap.get(source) ?? 0) + 1);
-    const bucket = index % 4;
-    if (lead.status === "won") gainsVsLosses[bucket].ganhos += 1;
-    if (lead.status === "lost") gainsVsLosses[bucket].perdidos += 1;
+  });
+
+  const now = Date.now();
+  const gainsVsLosses = Array.from({ length: 4 }, (_, i) => {
+    const weekStart = now - (3 - i) * 7 * 86_400_000;
+    const weekEnd = weekStart + 7 * 86_400_000;
+    const ganhos = legacyLeads.filter((l) => {
+      if (l.status !== "won" || !l.closedAt) return false;
+      const t = new Date(l.closedAt).getTime();
+      return t >= weekStart && t < weekEnd;
+    }).length;
+    const perdidos = legacyLeads.filter((l) => {
+      if (l.status !== "lost" || !l.closedAt) return false;
+      const t = new Date(l.closedAt).getTime();
+      return t >= weekStart && t < weekEnd;
+    }).length;
+    return { period: `Sem ${i + 1}`, ganhos, perdidos };
   });
 
   const conversionByStage = stages
