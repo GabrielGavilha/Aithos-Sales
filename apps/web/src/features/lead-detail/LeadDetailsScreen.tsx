@@ -35,6 +35,8 @@ export const LeadDetailsScreen = ({ workspaceId, payload }: LeadDetailsScreenPro
   const [note, setNote] = React.useState("");
   const [closeReason, setCloseReason] = React.useState("");
   const [stageId, setStageId] = React.useState(payload.lead.stageId);
+  const [assignedTo, setAssignedTo] = React.useState(payload.lead.assignedTo ?? "");
+  const [tagInput, setTagInput] = React.useState(payload.lead.tags.map((t) => t.label).join(", "));
   const [saving, setSaving] = React.useState(false);
 
   const [editDraft, setEditDraft] = React.useState<Partial<Lead>>({
@@ -131,6 +133,38 @@ export const LeadDetailsScreen = ({ workspaceId, payload }: LeadDetailsScreenPro
               <Label>Necessidade</Label>
               <Textarea value={editDraft.need ?? ""} onChange={(e) => setEditDraft((d) => ({ ...d, need: e.target.value }))} rows={2} />
             </div>
+            <div className="space-y-1">
+              <Label>Tags (separadas por virgula)</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="quente, ticket alto, indicacao..."
+                />
+                <Button
+                  variant="secondary"
+                  disabled={saving}
+                  onClick={() =>
+                    runAction(
+                      () =>
+                        fetch(`/api/leads/${payload.lead.id}/tags?workspaceId=${workspaceId}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            tags: tagInput
+                              .split(",")
+                              .map((t) => t.trim())
+                              .filter(Boolean)
+                          })
+                        }),
+                      "Tags atualizadas."
+                    )
+                  }
+                >
+                  Salvar tags
+                </Button>
+              </div>
+            </div>
             <Button
               disabled={saving}
               onClick={() =>
@@ -166,6 +200,42 @@ export const LeadDetailsScreen = ({ workspaceId, payload }: LeadDetailsScreenPro
             <CardTitle className="text-base">Acoes principais</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-[1fr,auto]">
+              <Select
+                value={assignedTo}
+                onValueChange={setAssignedTo}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Atribuir responsavel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem responsavel</SelectItem>
+                  {payload.members.map((member) => (
+                    <SelectItem key={member.userId} value={member.displayName}>
+                      {member.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="secondary"
+                disabled={saving || assignedTo === (payload.lead.assignedTo ?? "")}
+                onClick={() =>
+                  runAction(
+                    () =>
+                      fetch(`/api/leads/${payload.lead.id}/assign?workspaceId=${workspaceId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ assignedTo: assignedTo || null })
+                      }),
+                    "Responsavel atualizado."
+                  )
+                }
+              >
+                Atribuir
+              </Button>
+            </div>
+
             <div className="grid gap-2 sm:grid-cols-[1fr,auto]">
               <Select value={stageId} onValueChange={setStageId}>
                 <SelectTrigger>
@@ -345,7 +415,7 @@ export const LeadDetailsScreen = ({ workspaceId, payload }: LeadDetailsScreenPro
               Score atual: <strong>{payload.lead.score}</strong>
             </p>
             <p>Origem: {payload.lead.source ?? "Nao informada"}</p>
-            <p>Responsavel: {payload.lead.assignedTo ?? "Nao definido"}</p>
+            <p>Responsavel: {assignedTo || "Nao definido"}</p>
             <p>Ultima interacao: {new Date(payload.lead.lastInteractionAt ?? payload.lead.createdAt).toLocaleString("pt-BR")}</p>
           </CardContent>
         </Card>
