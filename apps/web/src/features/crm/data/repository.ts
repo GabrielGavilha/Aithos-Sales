@@ -4,6 +4,7 @@ import { cache } from "react";
 import {
   getLeadWithTimeline,
   getPipelineData,
+  getWorkspaceById,
   getWorkspaceForms,
   listLeadTasks,
   listLeads,
@@ -78,7 +79,14 @@ const computeMetrics = (leads: LegacyLead[], stages: LegacyStage[]) => {
     total: leads.filter((l) => l.stageId === s.id).length
   }));
 
-  return { leadsToday, avgTimeToFirstContactHours, conversionNovoToGanho, stalledLeads, topLossReasons, leadsByStage };
+  const conversionByStage = leadsByStage.map((entry, index) => {
+    if (index === 0) return { stageName: entry.stageName, conversion: 100 };
+    const prev = leadsByStage[index - 1];
+    const conversion = prev.total > 0 ? Number(((entry.total / prev.total) * 100).toFixed(1)) : 0;
+    return { stageName: `${prev.stageName} > ${entry.stageName}`, conversion };
+  });
+
+  return { leadsToday, avgTimeToFirstContactHours, conversionNovoToGanho, stalledLeads, topLossReasons, leadsByStage, conversionByStage };
 };
 
 const buildLeadsPayload = async (workspaceId: string): Promise<LeadsPayload> => {
@@ -181,11 +189,7 @@ export const getDashboardPayload = async (workspaceId: string): Promise<Dashboar
     overdueTasks: overdueTasks.slice(0, 6),
     leadsWithoutFollowUp: leadsWithoutFollowUp.slice(0, 6),
     funnelSummary: metrics.leadsByStage,
-    conversionByStage: [
-      { stageName: "Novo > Contato", conversion: 70 },
-      { stageName: "Contato > Negociacao", conversion: 53 },
-      { stageName: "Negociacao > Ganho", conversion: metrics.conversionNovoToGanho }
-    ]
+    conversionByStage: metrics.conversionByStage
   };
 };
 
@@ -254,10 +258,11 @@ export const getMetricsPayload = async (workspaceId: string): Promise<MetricsPay
 };
 
 export const getSettingsPayload = async (workspaceId: string): Promise<SettingsPayload> => {
-  const [stages, leadsPayload, metricsPayload] = await Promise.all([
+  const [stages, leadsPayload, metricsPayload, workspace] = await Promise.all([
     cachedListStages(workspaceId),
     buildLeadsPayload(workspaceId),
-    getMetricsPayload(workspaceId)
+    getMetricsPayload(workspaceId),
+    getWorkspaceById(workspaceId)
   ]);
 
   const tagMap = new Map<string, string>();
@@ -269,7 +274,7 @@ export const getSettingsPayload = async (workspaceId: string): Promise<SettingsP
     stages: stages.map(mapLegacyStage),
     tags: Array.from(tagMap.entries()).map(([id, label]) => ({ id, label })),
     lossReasons: metricsPayload.lossReasons,
-    followUpDays: 3,
+    followUpDays: workspace?.alertInactiveDays ?? 3,
     branding: {
       appName: "Aithos Sales",
       accentColor: "#2563eb"

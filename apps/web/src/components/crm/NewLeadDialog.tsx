@@ -25,6 +25,8 @@ import type { LeadStage } from "@/types";
 type Props = {
   workspaceId: string;
   stages: LeadStage[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 type FormState = {
@@ -51,10 +53,12 @@ const empty = (stages: LeadStage[]): FormState => ({
   stageId: stages[0]?.id ?? ""
 });
 
-export const NewLeadDialog = ({ workspaceId, stages }: Props) => {
+export const NewLeadDialog = ({ workspaceId, stages, open: controlledOpen, onOpenChange: controlledOnOpenChange }: Props) => {
   const router = useRouter();
   const { toast } = useToast();
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [saving, setSaving] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(() => empty(stages));
 
