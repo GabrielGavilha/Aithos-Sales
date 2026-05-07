@@ -588,6 +588,27 @@ export const listLeadEvents = async (
   };
 };
 
+export const listWorkspacePendingTasks = async (workspaceId: string) => {
+  if (!isSupabaseAdminConfigured()) {
+    return [] as LeadTask[];
+  }
+
+  const admin = getSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("lead_tasks")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("status", "pending")
+    .order("due_at", { ascending: true })
+    .returns<LeadTaskRow[]>();
+
+  if (error || !data) {
+    return [] as LeadTask[];
+  }
+
+  return data.map((row) => serializeTask(row));
+};
+
 export const listLeadTasks = async (workspaceId: string, leadId: string) => {
   if (!isSupabaseAdminConfigured()) {
     return [] as LeadTask[];
@@ -630,7 +651,7 @@ export const addLeadNote = async (params: {
   const admin = getSupabaseAdminClient();
   await admin
     .from("leads")
-    .update({ updated_at: nowIso() })
+    .update({ last_contact_at: nowIso(), updated_at: nowIso() })
     .eq("workspace_id", params.workspaceId)
     .eq("id", params.leadId);
 };
@@ -1128,6 +1149,108 @@ export const updateLead = async (params: {
     createdBy: params.userId,
     payload: { fields: Object.keys(data) }
   });
+};
+
+export const assignLead = async (params: {
+  workspaceId: string;
+  leadId: string;
+  assignedTo: string | null;
+  userId: string;
+}) => {
+  if (!isSupabaseAdminConfigured()) {
+    throw new Error("Supabase nao configurado.");
+  }
+
+  const admin = getSupabaseAdminClient();
+  const { error } = await admin
+    .from("leads")
+    .update({ assigned_to: params.assignedTo, updated_at: nowIso() })
+    .eq("workspace_id", params.workspaceId)
+    .eq("id", params.leadId);
+
+  if (error) {
+    throw new Error("Falha ao atribuir lead.");
+  }
+
+  await pushLeadEvent({
+    workspaceId: params.workspaceId,
+    leadId: params.leadId,
+    type: "updated",
+    createdBy: params.userId,
+    payload: { assigned_to: params.assignedTo }
+  });
+};
+
+export const bulkMoveStage = async (params: {
+  workspaceId: string;
+  leadIds: string[];
+  toStageId: string;
+  userId: string;
+}) => {
+  if (!isSupabaseAdminConfigured()) {
+    throw new Error("Supabase nao configurado.");
+  }
+
+  const admin = getSupabaseAdminClient();
+  const now = nowIso();
+
+  const { error } = await admin
+    .from("leads")
+    .update({ stage_id: params.toStageId, updated_at: now })
+    .eq("workspace_id", params.workspaceId)
+    .in("id", params.leadIds);
+
+  if (error) {
+    throw new Error("Falha ao mover leads.");
+  }
+
+  await Promise.all(
+    params.leadIds.map((leadId) =>
+      pushLeadEvent({
+        workspaceId: params.workspaceId,
+        leadId,
+        type: "stage_changed",
+        createdBy: params.userId,
+        payload: { toStageId: params.toStageId, bulk: true }
+      })
+    )
+  );
+};
+
+export const bulkAssignLeads = async (params: {
+  workspaceId: string;
+  leadIds: string[];
+  assignedTo: string | null;
+  userId: string;
+}) => {
+  if (!isSupabaseAdminConfigured()) {
+    throw new Error("Supabase nao configurado.");
+  }
+
+  const admin = getSupabaseAdminClient();
+  const now = nowIso();
+
+  const { error } = await admin
+    .from("leads")
+    .update({ assigned_to: params.assignedTo, updated_at: now })
+    .eq("workspace_id", params.workspaceId)
+    .in("id", params.leadIds);
+
+  if (error) {
+    throw new Error("Falha ao atribuir leads.");
+  }
+
+  await Promise.all(
+    params.leadIds.map((leadId) =>
+      pushLeadEvent({
+        workspaceId: params.workspaceId,
+        leadId,
+        type: "updated",
+        createdBy: params.userId,
+        payload: { assigned_to: params.assignedTo, bulk: true }
+      })
+    )
+  );
 };
 
 export const getLeadWithTimeline = async (workspaceId: string, leadId: string) => {
